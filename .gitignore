@@ -1,0 +1,7 @@
+data/
+weights/
+logs/
+__pycache__/
+*.pyc
+*.pth
+*.log
