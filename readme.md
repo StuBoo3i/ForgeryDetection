@@ -2,13 +2,7 @@
 
 # Pair-based Forgery Detection Model
 
-[[![Image](bd2ad2ad-06c0-4b2b-a714-ab06e902108d)](https://www.python.org/)](https://www.python.org/)
-
-[[![Image](1aca93b1-c9a7-4652-8352-2628ccdbb367)](https://pytorch.org/)](https://pytorch.org/)
-
-![Image](https://p11-flow-imagex-sign.byteimg.com/tos-cn-i-a9rns2rl98/rc/online_import/217e6cf567854123b35c75d63532c117~tplv-noop.jpeg?rk3s=49177a0b&x-expires=1773894791&x-signature=M%2B5aiavWmjHQib7ZfSCgKjlYmAE%3D&resource_key=2463c452-b3c6-43da-8d00-385329d30298&resource_key=2463c452-b3c6-43da-8d00-385329d30298)
-
-本项目是基于**配对式伪造范式**构建的端到端AI图像伪造检测与定位模型，完整复现了工业级伪造检测落地方案，可精准检测DeepFake人脸伪造、AI生成图像、局部编辑篡改、GAN风格迁移等主流伪造类型，同时输出像素级伪造区域定位结果。
+项目基于**配对式伪造范式**构建的端到端AI图像伪造检测与定位模型，实现精准检测DeepFake人脸伪造、AI生成图像、局部编辑篡改、GAN风格迁移等主流伪造类型，输出像素级伪造区域定位结果。
 
 ## ✨ 核心特性
 
@@ -71,18 +65,13 @@ ForgeryDetection/
 
     - 其他依赖详见 `requirements.txt`
 
-- 硬件建议：
-
-    - 训练：NVIDIA GPU 显存 >= 12GB（推荐24GB及以上）
-
-    - 推理：NVIDIA GPU 显存 >= 4GB 或 CPU
 
 ### 环境安装
 
 ```Bash
 
 # 克隆项目
-git clone https://github.com/your-username/ForgeryDetection.git
+git clone https://github.com/StuBoo3i/ForgeryDetection.git
 cd ForgeryDetection
 
 # 安装依赖
@@ -109,11 +98,9 @@ pip install -r requirements.txt
 └── ...
 ```
 
-推荐数据集：ImageNet-1K、COCO、FFHQ、CelebA-HQ等通用真实图像数据集。
-
 ### 2. 检测模型训练配对数据集
 
-严格遵循**同源配对**规范，真实原图与伪造图像必须一一对应、语义完全对齐，仅存在伪造操作带来的像素差异。
+遵循**同源配对**规范，真实原图与伪造图像一一对应、语义对齐，只存在伪造操作带来的像素差异。
 
 ```Plain Text
 
@@ -173,20 +160,21 @@ python train/train_detector.py
 ```Bash
 
 # 基础推理
-python inference.py --img_path 你的测试图像路径
+python inference.py --img_path 
 
 # 推理并保存可视化结果
-python inference.py --img_path 你的测试图像路径 --save_result --save_dir ./inference_results
+python inference.py --img_path --save_result --save_dir ./inference_results
 ```
 
 ### 推理参数说明
 
 |参数|说明|默认值|
 |---|---|---|
-|`--img_path`|待检测图像路径（必填）|-|
+|`--img_path`|待检测图像路径|-|
 |`--model_path`|模型权重文件路径|`./weights/best_model.pth`|
 |`--save_result`|是否保存可视化结果|不开启|
 |`--save_dir`|可视化结果保存目录|`./inference_results`|
+
 ### 输出结果
 
 1. 控制台输出：真实/伪造判别结果、对应概率值
@@ -206,6 +194,7 @@ python inference.py --img_path 你的测试图像路径 --save_result --save_dir
 |二分类任务|AUC|模型整体判别能力，越接近1性能越好|
 |定位任务|mIoU / Dice系数|像素级伪造区域定位精度，越接近1性能越好|
 |鲁棒性评价|AUC下降幅度|后处理/对抗攻击后的AUC衰减，幅度越小鲁棒性越强|
+
 ## 📌 核心模块设计详解
 
 1. **ViT编码器模块**：采用DINO自监督预训练ViT-B/16，取前4个Transformer Block提取低级视觉特征，通过通道注意力加权融合多尺度输出，全程冻结权重保证特征稳定性。
@@ -217,20 +206,6 @@ python inference.py --img_path 你的测试图像路径 --save_result --save_dir
 4. **互信息估计器**：基于InfoNCE框架，以同图像的残差-隐表示为正样本，跨图像的为负样本，优化真实/伪造样本的互信息差异，强化伪造特征区分度。
 
 5. **Swin Transformer模块**：2个连续的Swin Block，交替使用窗口注意力与滑动窗口注意力，建模全局与局部像素间的统计差异，兼顾计算效率与长程依赖捕捉能力。
-
-## 🤝 贡献指南
-
-欢迎提交Issue与PR参与项目贡献：
-
-1. Fork 本仓库
-
-2. 新建你的功能分支 (`git checkout -b feature/AmazingFeature`)
-
-3. 提交你的修改 (`git commit -m 'Add some AmazingFeature'`)
-
-4. 推送到分支 (`git push origin feature/AmazingFeature`)
-
-5. 新建 Pull Request
 
 ## 📄 许可证
 
