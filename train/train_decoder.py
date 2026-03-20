@@ -1,5 +1,6 @@
 import os
 import sys
+import argparse  # 新增：命令行参数解析
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import torch
@@ -14,6 +15,46 @@ from data.datasets import build_recon_dataloaders
 from utils.logger import get_logger
 from utils.weights_utils import save_weights
 from utils.image_saver import save_reconstructed_images 
+
+# 新增：命令行参数解析函数
+def parse_args():
+    parser = argparse.ArgumentParser(description="Train Reconstruction Decoder (Stage 1)")
+    parser.add_argument("--batch_size", type=int, default=None, help="Training batch size")
+    parser.add_argument("--epochs", type=int, default=None, help="Max training epochs")
+    parser.add_argument("--lr", type=float, default=None, help="Learning rate")
+    parser.add_argument("--weight_decay", type=float, default=None, help="Weight decay for optimizer")
+    parser.add_argument("--data_root", type=str, default=None, help="Root path of training data")
+    parser.add_argument("--output_dir", type=str, default=None, help="Directory to save outputs (weights, logs, images)")
+    parser.add_argument("--device", type=str, default=None, help="Training device (e.g., cuda:0, cpu)")
+    parser.add_argument("--early_stop_patience", type=int, default=None, help="Early stop patience epochs")
+    return parser.parse_args()
+
+# 新增：用命令行参数覆盖配置文件
+def override_config_with_args(args):
+    if args.batch_size is not None:
+        cfg.recon_train["batch_size"] = args.batch_size
+    if args.epochs is not None:
+        cfg.recon_train["epochs"] = args.epochs
+    if args.lr is not None:
+        cfg.recon_train["lr"] = args.lr
+    if args.weight_decay is not None:
+        cfg.recon_train["weight_decay"] = args.weight_decay
+    if args.data_root is not None:
+        cfg.recon_train["data_root"] = args.data_root
+    if args.output_dir is not None:
+        cfg.recon_train["output_dir"] = args.output_dir
+        # 同步更新日志、权重、重构图像的保存路径
+        cfg.recon_train["log_path"] = os.path.join(args.output_dir, "logs")
+        cfg.recon_train["save_path"] = os.path.join(args.output_dir, "weights", "decoder_best.pth")
+        cfg.recon_train["recon_save_root"] = os.path.join(args.output_dir, "recon_images")
+        # 自动创建目录
+        os.makedirs(cfg.recon_train["log_path"], exist_ok=True)
+        os.makedirs(os.path.dirname(cfg.recon_train["save_path"]), exist_ok=True)
+        os.makedirs(cfg.recon_train["recon_save_root"], exist_ok=True)
+    if args.device is not None:
+        cfg.device = args.device
+    if args.early_stop_patience is not None:
+        cfg.recon_train["early_stop_patience"] = args.early_stop_patience
 
 def train_decoder():
     # 初始化日志与tensorboard
@@ -77,10 +118,12 @@ def train_decoder():
             global_step += 1
             pbar.set_postfix(loss=loss_dict["total"])
             
-            # tensorboard记录
+            # tensorboard记录（注意：若已切换为仅MSE损失，需删除lpips/vgg的记录）
             writer.add_scalar("Train/mse_loss", loss_dict["mse"], global_step)
-            writer.add_scalar("Train/lpips_loss", loss_dict["lpips"], global_step)
-            writer.add_scalar("Train/vgg_loss", loss_dict["vgg"], global_step)
+            if "lpips" in loss_dict:
+                writer.add_scalar("Train/lpips_loss", loss_dict["lpips"], global_step)
+            if "vgg" in loss_dict:
+                writer.add_scalar("Train/vgg_loss", loss_dict["vgg"], global_step)
             writer.add_scalar("Train/total_loss", loss_dict["total"], global_step)
         
         # 平均训练损失
@@ -90,7 +133,6 @@ def train_decoder():
         # 验证步
         decoder.eval()
         val_loss_sum = 0.0
-        # 【新增】用于保存最后一个epoch的重构图像
         last_recon_batch = None
         with torch.no_grad():
             pbar = tqdm(val_loader, desc="Validation")
@@ -102,7 +144,6 @@ def train_decoder():
                 val_loss_sum += loss.item()
                 pbar.set_postfix(loss=loss_dict["total"])
                 
-                # 【新增】保存第一个验证batch的重构结果，用于最后epoch的可视化
                 if batch_idx == 0:
                     last_recon_batch = x_recon
         
@@ -123,8 +164,7 @@ def train_decoder():
             early_stop_counter += 1
             logger.info(f"早停计数: {early_stop_counter}/{cfg.recon_train['early_stop_patience']}")
             if early_stop_counter >= cfg.recon_train["early_stop_patience"]:
-                logger.info("验证损失连续10轮未下降，触发早停")
-                # 【新增】早停触发前，保存当前重构图像
+                logger.info("验证损失连续多轮未下降，触发早停")
                 save_reconstructed_images(
                     last_recon_batch,
                     save_root=cfg.recon_train.get("recon_save_root", "./recon_outputs"),
@@ -132,7 +172,6 @@ def train_decoder():
                 )
                 break
     
-    # 【新增】正常训练结束（未早停），保存最后一个epoch的重构图像
     if early_stop_counter < cfg.recon_train["early_stop_patience"]:
         save_reconstructed_images(
             last_recon_batch,
@@ -146,4 +185,6 @@ def train_decoder():
     writer.close()
 
 if __name__ == "__main__":
+    args = parse_args()
+    override_config_with_args(args)
     train_decoder()
