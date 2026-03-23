@@ -6,7 +6,7 @@
 #SBATCH --mem=16G
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=4
+#SBATCH --cpus-per-task=8
 #SBATCH --output=./outputs/decoder_%x_%j.out
 #SBATCH --error=./outputs/decoder_%x_%j.err
 
