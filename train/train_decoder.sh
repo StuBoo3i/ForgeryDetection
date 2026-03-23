@@ -31,7 +31,7 @@ PROJECT_DIR="/nfsdat/home/jwangslm/ForgeryDetection/train"
 # 训练脚本路径
 TRAIN_SCRIPT="${PROJECT_DIR}/train_decoder.py"
 # 数据集根目录
-DATA_ROOT="/nfsdat/home/bglvslm/competition/your_recon_dataset"
+DATA_ROOT="/nfsdat/home/jwangslm/ForgeryDetection/data/pairs/real512"
 # 输出根目录
 OUTPUT_DIR="${PROJECT_DIR}/outputs/decoder_train_${SLURM_JOB_ID}" 
 
